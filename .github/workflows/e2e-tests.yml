@@ -29,7 +29,7 @@ jobs:
           # Make a build of the Android app
           - name: Build Android app
             run: |
-              detox build --configuration android
+              npx detox build --configuration android
 
           # Install an Android emulator with SDK 30 (Android 11) with the name: Nexus_6P
           - name: Download Android emulator
@@ -51,7 +51,7 @@ jobs:
             run: |
               yarn start >/dev/null &
               PID=$(ps $! | tail -1 | awk '{print $1}')
-              detox test --configuration ios
+              npx detox test --configuration android
               kill $PID
 
     # End to end tests on iOS
@@ -84,7 +84,7 @@ jobs:
             # Make a build of the iOS app
             - name: Build iOS app
               run: |
-                detox build --configuration ios
+                npx detox build --configuration ios
 
             # Boot simulator and metro and run tests
             # Metro is required because Detox uses debug builds of the app
@@ -92,5 +92,5 @@ jobs:
               run: |
                 yarn start >/dev/null &
                 PID=$(ps $! | tail -1 | awk '{print $1}')
-                detox test --configuration ios
+                npx detox test --configuration ios
                 kill $PID

@@ -1,0 +1,30 @@
+name: End to end tests
+on: [push]
+jobs:
+    eslint:
+        runs-on: macOS-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Get yarn cache
+              id: yarn-cache
+              run: echo "::set-output name=dir::$(yarn cache dir)"
+            - uses: actions/cache@v1
+              with:
+                  path: ${{ steps.yarn-cache.outputs.dir }}
+                  key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-yarn-
+            - name: Install dependencies
+              run: |
+                yarn
+                cd ios && pod install
+            - name: Install applesimutils
+              run: |
+                brew tap wix/brew
+                brew install applesimutils
+            - name: Run E2E Tests
+              run: |
+                yarn start >/dev/null &
+                PID=$(ps $! | tail -1 | awk '{print $1}')
+                yarn run detoxBuildAndRunIos
+                kill $PID

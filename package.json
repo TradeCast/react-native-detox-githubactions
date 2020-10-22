@@ -9,7 +9,9 @@
     "test": "jest",
     "lint": "eslint .",
     "detoxBuildAndRunIos": "detox build --configuration ios && detox test --configuration ios",
-    "detoxRunIos": "detox test --configuration ios"
+    "detoxRunIos": "detox test --configuration ios",
+    "detoxBuildAndRunAndroid": "detox build --configuration android && detox test --configuration android",
+    "detoxRunAndroid": "detox test --configuration android"
   },
   "dependencies": {
     "react": "16.13.1",

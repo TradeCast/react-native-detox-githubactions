@@ -12,9 +12,10 @@
     },
     "android": {
       "type": "android.emulator",
-      "binaryPath": "SPECIFY_PATH_TO_YOUR_APP_BINARY",
+      "binaryPath": "android/app/build/outputs/apk/debug/app-debug.apk",
+      "build": "npx jetifier && cd android && ./gradlew app:assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..",
       "device": {
-        "avdName": "Pixel_2_API_29"
+        "avdName": "Nexus_6P"
       }
     }
   }

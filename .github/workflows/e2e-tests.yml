@@ -1,8 +1,62 @@
 name: End to end tests
 on: [push]
 jobs:
-    eslint:
-        runs-on: macOS-latest
+    # End to end tests on Android
+    android-e2e:
+        runs-on: macos-latest
+        steps:
+          - uses: actions/checkout@v2
+          - name: Get yarn cache
+            id: yarn-cache
+            run: echo "::set-output name=dir::$(yarn cache dir)"
+          - uses: actions/cache@v1
+            with:
+                path: ${{ steps.yarn-cache.outputs.dir }}
+                key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+                restore-keys: |
+                    ${{ runner.os }}-yarn-
+          - name: Install dependencies
+            run: |
+              yarn
+                    
+          # Lock Java version to JDK 8 which is used by React Native
+          - name: Use specific Java version for the builds
+            uses: joschi/setup-jdk@v1
+            with:
+              java-version: 'openjdk8'
+              architecture: 'x64'
+
+          # Make a build of the Android app
+          - name: Build Android app
+            run: |
+              detox build --configuration android
+
+          # Install an Android emulator with SDK 30 (Android 11) with the name: Nexus_6P
+          - name: Download Android emulator
+            run: |
+              echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install "system-images;android-30;google_apis;x86"
+              echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd --force --name Nexus_6P --device "Nexus 6P" -k 'system-images;android-30;google_apis;x86'
+              $ANDROID_HOME/emulator/emulator -list-avds
+
+          # Boot our Android emulator
+          - name: Boot Android emulator
+            run: |
+              nohup $ANDROID_HOME/emulator/emulator -avd Nexus_6P -no-audio -no-snapshot -no-window &
+              $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
+              $ANDROID_HOME/platform-tools/adb devices
+
+          # Boot metro and run tests
+          # Metro is required because Detox uses debug builds of the app
+          - name: boot metro server, install build and run tests
+            run: |
+              yarn start >/dev/null &
+              PID=$(ps $! | tail -1 | awk '{print $1}')
+              detox test --configuration ios
+              kill $PID
+
+    # End to end tests on iOS
+    ios-e2e:
+        runs-on: macos-latest
         steps:
             - uses: actions/checkout@v2
             - name: Get yarn cache
@@ -14,17 +68,29 @@ jobs:
                   key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
                   restore-keys: |
                       ${{ runner.os }}-yarn-
+
+            # Install node_modules and pod dependencies
             - name: Install dependencies
               run: |
                 yarn
                 cd ios && pod install
+
+            # Install required dependencies that Detox needs for the iOS simulator
             - name: Install applesimutils
               run: |
                 brew tap wix/brew
                 brew install applesimutils
-            - name: Run E2E Tests
+
+            # Make a build of the iOS app
+            - name: Build iOS app
+              run: |
+                detox build --configuration ios
+
+            # Boot simulator and metro and run tests
+            # Metro is required because Detox uses debug builds of the app
+            - name: boot simulator, boot metro server, install build and run tests
               run: |
                 yarn start >/dev/null &
                 PID=$(ps $! | tail -1 | awk '{print $1}')
-                yarn run detoxBuildAndRunIos
+                detox test --configuration ios
                 kill $PID
